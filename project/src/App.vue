@@ -57,6 +57,36 @@ const deleteTodo = async (id: string) => {
   }
 }
 
+// ---- update the todo
+const editingTodo = ref<Todo | null>(null)
+const editedText = ref<string>('')
+
+// টুডু আপডেট করো (text আপডেট করার জন্য)
+const updateTodoText = async () => {
+  if (!editingTodo.value || !editedText.value.trim()) return
+
+  try {
+    const updatedTodo = {
+      ...editingTodo.value,
+      text: editedText.value,
+    }
+
+    await axios.put('http://localhost:5000/put', updatedTodo)
+
+    // লোকাল todos তালিকায় আপডেট
+    const index = todos.value.findIndex(todo => todo.id === editingTodo.value?.id)
+    if (index !== -1) {
+      todos.value[index].text = editedText.value
+    }
+
+    editingTodo.value = null
+    editedText.value = ''
+  } catch (err) {
+    console.error('Error updating text:', err)
+  }
+}
+
+
 // পেজ লোড হলে ডেটা আনো
 onMounted(fetchTodos)
 </script>
@@ -76,15 +106,29 @@ onMounted(fetchTodos)
 
     <ul class="todo-list">
       <li v-for="todo in todos" :key="todo.id" class="todo-item">
-        <span
-          :class="{ completed: todo.completed }"
-          @click="toggleTodo(todo)"
-        >
-          {{ todo.text }}
-        </span>
-        <button class="delete-btn" @click="deleteTodo(todo.id)">Delete</button>
+        <!-- যদি টুডু এখন এডিটিং হয় -->
+        <div v-if="editingTodo && editingTodo.id === todo.id" class="edit-mode">
+          <input v-model="editedText" />
+          <button @click="updateTodoText">Save</button>
+          <button @click="() => { editingTodo = null; editedText = '' }">Cancel</button>
+        </div>
+
+        <!-- নরমাল ভিউ -->
+        <div v-else class="view-mode">
+          <span
+            :class="{ completed: todo.completed }"
+            @click="toggleTodo(todo)"
+          >
+            {{ todo.text }}
+          </span>
+          <div class="btn-group">
+            <button class="edit-btn" @click="() => { editingTodo = todo; editedText = todo.text }">Edit</button>
+            <button class="delete-btn" @click="deleteTodo(todo.id)">Delete</button>
+          </div>
+        </div>
       </li>
     </ul>
+
   </main>
 </template>
 
@@ -151,4 +195,32 @@ h2 {
   padding: 6px 10px;
   cursor: pointer;
 }
+
+.edit-mode {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.edit-mode input {
+  flex: 1;
+  padding: 6px;
+}
+.view-mode {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+.btn-group button {
+  margin-left: 6px;
+}
+.edit-btn {
+  background: orange;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+
 </style>
